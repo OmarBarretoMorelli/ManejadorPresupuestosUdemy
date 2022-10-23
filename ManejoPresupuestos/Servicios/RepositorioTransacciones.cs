@@ -8,7 +8,8 @@ namespace ManejoPresupuestos.Servicios
 
     public interface IRepositorioTransacciones
     {
-        Task Crear(Transaccion transaccion);
+        Task Actualizar(Transaccion transaccion, decimal montoAnterior, int cuentaAnterior);
+        Task Crear(TransaccionCreacionViewModel transaccion);
     }
 
 
@@ -21,15 +22,31 @@ namespace ManejoPresupuestos.Servicios
             connectionString = configuration.GetConnectionString("DefaultConnectionSQL"); 
         }
 
-        public async Task Crear(Transaccion transaccion)
+        public async Task Crear(TransaccionCreacionViewModel transaccion)
         {
             using var connection = new SqlConnection(connectionString);
             int id = await connection.QuerySingleAsync<int>("Transacciones_Insertar", new 
                                                             { transaccion.UsuarioId, transaccion.FechaTransaccion,
                                                               transaccion.Monto, transaccion.CategoriaId,
-                                                              transaccion.CuentaId, transaccion.Nota },
+                                                              transaccion.CuentaId, transaccion.Nota, transaccion.TipoOperacionId },
                                                               commandType: System.Data.CommandType.StoredProcedure);
             transaccion.Id = id;
+        }
+
+        public async Task Actualizar(Transaccion transaccion, decimal montoAnterior, int cuentaAnterior)
+        {
+            using var connection = new SqlConnection(connectionString);
+            await connection.ExecuteAsync("Transacciones_Actualizar", new
+            {
+                transaccion.Id,
+                transaccion.FechaTransaccion,
+                transaccion.Monto,
+                transaccion.CategoriaId,
+                transaccion.CuentaId,
+                transaccion.Nota,
+                montoAnterior,
+                cuentaAnterior
+            }, commandType: System.Data.CommandType.StoredProcedure);            
         }
 
 

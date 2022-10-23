@@ -4,6 +4,7 @@ using ManejoPresupuestos.Servicios.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.IdentityModel.Abstractions;
 
 namespace ManejoPresupuestos.Controllers
 {
@@ -23,25 +24,58 @@ namespace ManejoPresupuestos.Controllers
             this.repositorioCuentas = repositorioCuentas;
         }
 
+        public IActionResult Index() 
+        {
+
+
+
+            return View();
+        }
+
         public async Task<IActionResult> Crear()
         {
             var usuarioId = servicioUsuario.ObtenerUsuarioId();
             var modelo = new TransaccionCreacionViewModel();
             modelo.Cuentas = await ObtenerCuentas(usuarioId);
+            modelo.Categorias = await ObtenerCategorias(usuarioId, modelo.TipoOperacionId);
 
             return View(modelo);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Crear(Transaccion transaccion)
+        public async Task<IActionResult> Crear(TransaccionCreacionViewModel modelo)
         {
+            var usuarioId = servicioUsuario.ObtenerUsuarioId();
+
             if (!ModelState.IsValid)
+            {
+                modelo.Categorias = await ObtenerCategorias(usuarioId, modelo.TipoOperacionId);
+                modelo.Cuentas = await ObtenerCuentas(usuarioId);
+                return View(modelo);
+            }
+
+            var cuenta = await repositorioCuentas.obtenerPorId(modelo.CuentaId , usuarioId);
+
+            if (cuenta is null)
             {
                 return RedirectToAction("NoEncontrado", "Home");
             }
 
-            var usuarioId = servicioUsuario.ObtenerUsuarioId();
-            //FALTA implementar
+            var categoria = await repositorioCategorias.ObteneroPorId(modelo.CategoriaId, usuarioId);
+
+            if (cuenta is null)
+            {
+                return RedirectToAction("NoEncontrado", "Home");
+            }
+
+            modelo.UsuarioId = usuarioId;
+
+            if (modelo.TipoOperacionId == TipoOperacion.Egreso)
+            {
+                modelo.Monto *= -1;
+            }
+            
+            await repositorioTransacciones.Crear(modelo);
             return RedirectToAction("Index");
         }
 
